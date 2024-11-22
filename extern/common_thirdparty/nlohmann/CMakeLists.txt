@@ -8,8 +8,6 @@ set(HEADERS
     ./json/single_include/nlohmann/json_fwd.hpp
 )
 
-directory_source_group(./)
-
 add_library(${PROJECT_NAME} INTERFACE)
 add_custom_target(${PROJECT_NAME}_i SOURCES ${HEADERS})
 

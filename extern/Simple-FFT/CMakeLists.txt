@@ -14,8 +14,6 @@ set(HEADERS
     Simple-FFT/include/simple_fft/error_handling.hpp
 )
 
-directory_source_group(./)
-
 add_library(${PROJECT_NAME} INTERFACE)
 add_custom_target(${PROJECT_NAME}_i SOURCES ${HEADERS})
 
