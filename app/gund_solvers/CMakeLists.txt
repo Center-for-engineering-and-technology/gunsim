@@ -11,6 +11,7 @@ option(WITH_TESTS "Include test project")
 add_subproject(gund_utility)
 add_subproject(spectrum_solver)
 add_subproject(gund_parser)
+add_subproject(gun_model)
 
 if(WITH_TESTS)
   add_subproject(spectrum_solver_test)

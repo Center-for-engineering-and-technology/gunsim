@@ -44,8 +44,8 @@ std::string getExecutableDir() {
     }
 #else
     char buffer[MAX_PATH_LOCAL];
-    size_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-    if (len!= -1) 
+    int len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    if (len != -1) 
     {
         buffer[len] = '\0';
         exePath = buffer;
@@ -58,6 +58,17 @@ std::string getExecutableDir() {
 
     auto path = std::filesystem::path(exePath).parent_path();
     return path.generic_string();
+}
+
+size_t findNextPowerOfTwo(size_t n) {
+    if (n == 0 || n == 1) { return 1; }
+    // уменьшаем число для обработки случая, когда n - уже степень двойки
+    n = n - 1;
+    // сбрасываем крайний правый бит, пока не останется ближайшая меньшая степень двойки
+    while (n & (n - 1)) {
+        n = n & (n - 1);
+    }
+    return n << 1;
 }
 
 } // namespace gund_utility
