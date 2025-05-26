@@ -13,12 +13,18 @@ set(HEADERS
     ./include/spectrum_solver.h
     ./include/spectrum_solver_structs.h
     ./include/fourier_solver.h
+    ./include/internal_filter.h
+    ./include/direct_diag.h
+    ./include/energy_comp.h
 )
 
 set(SOURCES
     ./src/spectrum_solver.cpp
     ./src/spectrum_solver_structs.cpp
     ./src/fourier_solver.cpp
+    ./src/internal_filter.cpp
+    ./src/direct_diag.cpp
+    ./src/energy_comp.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${HEADERS} ${SOURCES})

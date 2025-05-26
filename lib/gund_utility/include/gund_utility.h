@@ -12,5 +12,7 @@ namespace gund_utility {
 
     // получаем адрес сборки
     std::string getExecutableDir();
+    // находим ближайшую степень двойки большую или равную рассматриваемому числу
+    size_t findNextPowerOfTwo(size_t n);
 
 } // namespace gund_utility

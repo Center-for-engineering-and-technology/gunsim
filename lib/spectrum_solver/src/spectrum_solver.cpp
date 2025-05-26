@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include <spectrum_solver.h>
+﻿#include <spectrum_solver.h>
 
 namespace spectrum_solver {
 
