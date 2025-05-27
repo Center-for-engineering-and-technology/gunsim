@@ -596,7 +596,7 @@ void GunArraySolver<MRK>::oneTimeStep(size_t i, std::vector<std::exception_ptr> 
 			try {
 				std::rethrow_exception(ex);
 			} catch (const std::logic_error &e) {
-				throw e;
+				throw;
 			}
 		}
 	}

@@ -103,7 +103,7 @@ using namespace spectrum_solver_structs;
     gund_structs::GunType convertGunType(std::string& type) {
         toUpperCase(type);
 
-        gund_structs::GunType gunType;
+        gund_structs::GunType gunType{};
         if (type == "1500C") { gunType = gund_structs::GunType::C1500; }
         else if (type == "1900C") { gunType = gund_structs::GunType::C1900; }
 
@@ -157,4 +157,3 @@ using namespace spectrum_solver_structs;
 
 
 } // gund_json_parser
-
