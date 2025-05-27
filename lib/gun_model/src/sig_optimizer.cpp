@@ -193,8 +193,8 @@ void Genome::echoSignature(const gun_model::PhysParams &PP, const gun_model::Met
     auto echo = solver.solve();
     if (echo == "Solving done well") {
         auto result = solver.getResult();
-        auto &signature = result.signatures[0];
-        auto &data_signature = data.data_h_v_p[i_h][i_v][i_p];
+        const auto &signature = result.signatures[0];
+        const auto &data_signature = data.data_h_v_p[i_h][i_v][i_p];
         std::cout << "solver's signature: ";
         for (size_t i = 0; i < data.mesh.SIGN_SIZE; ++i)
             std::cout << signature[i] << ", ";
@@ -263,14 +263,14 @@ Population Population::geneticStep(const gun_model::PhysParams& PP, const gun_mo
 
 void Population::echoFit() const {
     std::cout << "fitness: ";
-    for (auto &ind : individs)
+    for (const auto &ind : individs)
         std::cout << ind.fitness << " ";
     std::cout << "\n";
 }
 
 void Population::echoBest() const {
     std::cout << "best genome: ";
-    for (auto &param : individs.back().params)
+    for (const auto &param : individs.back().params)
         std::cout << param.value << " ";
     std::cout << "\n";
 }
@@ -299,7 +299,7 @@ std::string Genetic<Regime>::solve() {
 }
 
 // дефолтный оптимизатор (без зависимостей от входных параметров h, v, p)
-gun_model::Gun::GunType Default::gun_type_impl(const Genome& genome, double h, double v, double p) {
+gun_model::Gun::GunType Default::gun_type_impl(const Genome& genome, double /*h*/, double /*v*/, double /*p*/) {
     if (genome.params.size() != 10)
         throw std::logic_error("wrong input genome");
     for (size_t i = 0; i < genome.params.size(); ++i)

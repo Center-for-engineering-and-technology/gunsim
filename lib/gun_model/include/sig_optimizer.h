@@ -35,8 +35,8 @@ public:
     std::vector<std::vector<std::vector<std::vector<double>>>> data_h_v_p;
 
     void parseData();
-    void setMesh(Mesh mesh_) { mesh = mesh_; }
-    void setDataPath(std::string dataPath_) { dataPath = dataPath_; }
+    void setMesh(const Mesh& mesh_) { mesh = mesh_; }
+    void setDataPath(const std::string& dataPath_) { dataPath = dataPath_; }
 };
 
 struct Options {
@@ -102,7 +102,7 @@ public:
     std::vector<std::function<double(const std::vector<double>&, const std::vector<double>&)>> norms;
     Population population;
 
-    Genetic(Options options_, Mesh mesh_, std::string dataPath_, std::string gunName_, const std::vector<std::function<double(const std::vector<double>&, const std::vector<double>&)>> &norms_) 
+    Genetic(Options options_, const Mesh& mesh_, std::string dataPath_, std::string gunName_, const std::vector<std::function<double(const std::vector<double>&, const std::vector<double>&)>> &norms_)
     : options(options_), dataPath(dataPath_), gunName(gunName_), norms(norms_)
     { data.setDataPath(dataPath + gunName + "/"); data.setMesh(mesh_); data.parseData(); PP.ref = 0; population.initialisation<Regime>(options.POP_SIZE); }
     std::string solve();
@@ -216,5 +216,3 @@ public:
 };
 
 } // namespace sig_optimizer
-
-

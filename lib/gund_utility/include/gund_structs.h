@@ -104,4 +104,3 @@ namespace gund_structs {
         BandpassFilter bandpass;
     };
 } // namespace gund_structs
-

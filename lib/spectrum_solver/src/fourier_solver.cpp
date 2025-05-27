@@ -141,4 +141,3 @@ namespace fourier_solver {
     }
 
 } // namespace fourier_solver
-
