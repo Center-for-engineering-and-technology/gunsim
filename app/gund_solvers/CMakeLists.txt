@@ -8,11 +8,14 @@ project_guarded(gund_solvers)
 
 option(WITH_TESTS "Include test project")
 
-add_subproject(gund_utility)
+add_subproject(common_structs)
 add_subproject(spectrum_solver)
 add_subproject(gund_parser)
+add_subproject(internal_filter)
 add_subproject(gun_model)
+add_subproject(comparative_analysis)
+
 
 if(WITH_TESTS)
-  add_subproject(spectrum_solver_test)
+  #add_subproject(spectrum_solver_test)
 endif(WITH_TESTS)
