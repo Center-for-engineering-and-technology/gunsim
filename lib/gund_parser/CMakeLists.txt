@@ -18,16 +18,16 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${HEADERS} ${SOURCES})
 
+#generate_headers(${PROJECT_NAME} ${HEADERS})
+
 target_include_directories(${PROJECT_NAME} PUBLIC ./include)
 
-add_subproject(gund_utility)
-add_subproject(spectrum_solver)
+add_subproject(common_structs)
 add_subproject(extern/common_thirdparty/nlohmann)
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
-  gund_utility
-  spectrum_solver
+  common_structs
   nlohmann
 )
 
