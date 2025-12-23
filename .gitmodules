@@ -1,0 +1,6 @@
+[submodule "extern/common_thirdparty/eigen/eigen"]
+	path = extern/common_thirdparty/eigen/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "extern/common_thirdparty/range-v3/range-v3"]
+	path = extern/common_thirdparty/range-v3/range-v3
+	url = https://github.com/ericniebler/range-v3.git
