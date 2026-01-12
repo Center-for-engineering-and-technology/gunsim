@@ -1,6 +1,11 @@
 # Библиотека для моделирования и обработки сигналов морских пневматических источников
 
-**Библиотека для моделирования и обработки сигналов морских пневматических источников** – набор инструментов, который позволяет проводить предварительную обработку и суммирование исходных акустических распределённых сигналов (в том числе от пневматических источников). Программные компоненты модуля позволяют различными методами провести предварительную фильтрацию исходных распределенных сигналов и рассчитать итоговый сигнал в заданной точке пространства, с учетом его затухания и отражения. Реализована модель расчета акустического сигнала от группового морского пневматического источника. Модель основана на численном решении уравнений Келлера-Колоднера, описывающих процесс пульсации воздушной полости в сжимаемой жидкости. Присутствует функционал, позволяющий настраивать параметры модели на внешне заданные сигнатуры источников, который основан на применении генетического алгоритма. 
+**Библиотека для моделирования и обработки сигналов морских пневматических источников** – набор инструментов, который позволяет проводить предварительную обработку и суммирование исходных акустических распределённых сигналов (в том числе от пневматических источников, в том числе по данным с нескольких гидрофонов), а также настройку параметров дифференциальной модели на эталонный сигнал. 
+
+Программные компоненты модуля позволяют различными методами провести предварительную фильтрацию исходных распределенных сигналов и рассчитать итоговый сигнал в заданной точке пространства, с учетом его затухания и отражения. Присутствуют полосовая фильтрация (как для фильтров, заданных через импульсную характеристику, так и для параметрических фильтров), антиалиасинговая фильтрация, Q-фильтрация, фильтрация по Винеру.
+
+Реализована модель расчета акустического сигнала от группового морского пневматического источника. Модель основана на численном решении уравнений Келлера-Колоднера, описывающих процесс пульсации воздушной полости в сжимаемой жидкости. Присутствует функционал, позволяющий настраивать параметры модели на внешне заданные сигнатуры источников, который основан на применении генетического алгоритма.
+
 
 ![Logotype](./docs/НТИ_логотип_с_плашкой_RGB.png)
 
@@ -41,6 +46,8 @@
 Имеется возможность создания кастомных bandpass-фильтров с заданной полосой пропускания, с линейной и минимальной фазой.
 
 Добавлены Q-фильтр, фильтр Винера, антиалиасинговый фильтр.
+
+Добавлен расчет отсева (drop-out).
 
 Добавлена библиотека с функционалом, позволяющим численно моделировать акустический сигнал от индивидуальных и групповых пневмоисточников с использованием методов Рунге-Кутты.
 
@@ -309,6 +316,212 @@ zeroPhaseFilter.apply(inputSignal, filteredSignal);
  - Minimal-phase - когда важна минимальная задержка
 
 Для морских сейсмических данных часто предпочтительны фильтры с линейной фазой, так как они сохраняют временные соотношения между событиями.
+
+## Расширенная обработка сигналов (Q-фильтр, фильтр Винера, антиалиасинг)
+
+Помимо bandpass-фильтрации, `gunsim` поддерживает **частотно-зависимое затухание (Q-filter)**, **оптимальную фильтрацию Винера** и **антиалиасинг**. Все фильтры опциональны и включаются через `SpectrumSolverOptions`.
+
+---
+
+### `QFilter` — моделирование затухания в среде
+
+Класс: `gund_structs::QFilter`
+Назначение: имитирует частотно-зависимое затухание сигнала при распространении на **двустороннее время пробега (TWT)**, как в реальной сейсморазведке.
+
+#### Параметры и ограничения:
+| Метод | Диапазон | Описание |
+|------|----------|----------|
+| `setQValue(double)` | `[10.0, 1000.0]` | Q-фактор (чем меньше — сильнее затухание) |
+| `setTWTravelTime(double)` | `[0.01, 50.0]` с | двустороннее время пробега (TWT) |
+
+> Значения автоматически клиппируются к допустимому диапазону.
+
+#### Использование:
+```cpp
+gund_structs::QFilter qf;
+qf.setQValue(45.0);          // типичное значение для морской воды
+qf.setTWTravelTime(2.4);     // 2.4 с → глубина ~1800 м (при 1500 м/с)
+
+SpectrumSolverOptions options;
+options.q_filter = qf;       // std::optional — присваиваем напрямую
+```
+
+Внутри вызывается `filters_common::constructFilter(qf, params)`, затем свёртка с сигналом.
+
+---
+
+### `WienerFilter` — оптимальная фильтрация и деконволюция
+
+Класс: `gund_structs::WienerFilter`
+Назначение:
+- Подавление шума (minimum MSE)
+- Spike-деконволюция (обратная фильтрация)
+- Предсказывающая ошибка (PEF)
+
+#### Параметры и ограничения:
+| Метод | Диапазон | Описание |
+|------|----------|----------|
+| `setLen(size_t)` | `[5, 200]` | длина импульсной характеристики |
+| `setGap(size_t)` | `[1, 200]` | задержка предсказания (gap); при `gap=0` — spike-режим |
+| `setWhiteLightPercentage(double)` | `[0, 10]` % | регуляризация «белым шумом» |
+
+#### Флаги:
+| Флаг | Значение по умолчанию | Эффект |
+|------|------------------------|--------|
+| `spike_mode` | `false` | при `true` → spike-деконволюция (`gap` игнорируется, используется `gap=0`) |
+| `scale_mode` | `false` | при `true` — масштабирование энергии выходного сигнала |
+
+#### Использование:
+```cpp
+gund_structs::WienerFilter wf;
+wf.setLen(40);                    // 40 отсчётов ИХ
+wf.setGap(2);                     // 2*dt задержка
+wf.setWhiteLightPercentage(2.0);  // 2% регуляризации
+wf.spike_mode = true;             // → spike-деконволюция
+
+SpectrumSolverOptions options;
+options.wiener_filter = wf;
+```
+
+> Внутри используется:
+> - `filters_common::BuildWienerFilter()` — построение ИХ
+> - `WienerRecursion()` → `BuildPefFromSpike()` → `MinphaseWindowViaWiener()`
+> - свёртка через FFT (`ApplyFirFilter`)
+
+---
+
+### `AntiAliasFilter` — фильтр перед даунсэмплингом
+
+Класс: `gund_structs::AntiAliasFilter` (наследует `NewBandPassFilter`)
+Назначение: подавление наложения спектров **перед изменением `sampleInterval`** в `output_sigParams`.
+
+#### Особенности:
+- Только **верхний срез** (`low_freq_cut = 0`, `low_slope = 0`)
+- Частота среза вычисляется как:
+  \[
+  f_{\text{cut}} = 0.5 \cdot \frac{\text{nyq\_prcnt}}{100} \cdot \frac{1}{\text{out\_tsamp}}
+  \]
+- Минимальная фаза (`minphase = true`)
+- Высокая крутизна: `[24, 500]` дБ/окт
+
+#### Параметры:
+| Метод | Диапазон | Описание |
+|------|----------|----------|
+| `setOutTSamp(double)` | >0 | целевой шаг дискретизации (с) на выходе |
+| `setHighNyqPrcntFreqCut(double)` | `[50, 100]` % | доля от Nyquist частоты (например, `95` → \( f_{\text{cut}} = 0.95 \cdot f_{\text{Nyq}} \)) |
+| `setHighSlope(double)` | `[24, 500]` дБ/окт | крутизна среза |
+
+#### Использование:
+```cpp
+gund_structs::AntiAliasFilter aaf;
+aaf.setOutTSamp(0.002);         // хотим dt = 2 мс на выходе
+aaf.setHighNyqPrcntFreqCut(90); // f_cut = 0.9 * 250 Гц = 225 Гц
+aaf.setHighSlope(48.0);         // 48 дБ/окт
+
+SpectrumSolverOptions options;
+options.antialias_filter = aaf;
+options.output_sigParams.sampleInterval = 0.002; // ДОЛЖНО СОВПАДАТЬ!
+```
+
+> Фильтр **не применяется автоматически** — только если указан в `options`.
+> `out_tsamp` **должен совпадать** с `output_sigParams.sampleInterval`.
+
+---
+
+## Анализ отсева (Drop-Out)
+
+`gunsim` поддерживает автоматический анализ отказов 1, 2 или 3 пневмоисточников.
+
+#### Конфигурация: `gund_structs::DropOutParameters`
+
+| Параметр | Описание | Типичное значение |
+|---------|----------|-------------------|
+| `mode` | `OFF`/`SINGLE`/`DOUBLE`/`TRIPLE` | `SINGLE` |
+| `maxPeakToPeakDrop` | макс. доп. падение peak-to-peak (%) | `15.0` |
+| `minPrimaryToBubble` | мин. P/B (дБ) | `8.0` |
+| `maxPrimaryToBubbleDrop` | макс. падение P/B (%) | `10.0` |
+| `minNormXCorr` | мин. норм. кросс-корреляция | `0.95` |
+| `maxAverageAmpDrop` | макс. падение средней спектр. амплитуды (дБ) | `3.0` |
+| `maxAmpDifference` | макс. локальное отклонение амплитуды (дБ) | `6.0` |
+
+#### Запуск анализа:
+```cpp
+SpectrumSolverOptions options;
+options.dropParams.mode = gund_structs::DropOutParameters::SINGLE;
+options.dropParams.maxPeakToPeakDrop = 12.0;
+// ... остальные пороги
+
+SpectrumSolver solver(table, params, options);
+auto result = solver.dropOut();  // ← ключевой метод!
+```
+
+#### Результат:
+```cpp
+if (std::holds_alternative<DropOutAndSpectrumResults>(result)) {
+    auto& [dropRes, specRes] = std::get<DropOutAndSpectrumResults>(result);
+
+    std::cout << "  Отсев завершён:\n"
+              << "  Одиночные: " << dropRes.singleSuccessfulPercent << "% успешных\n"
+              << "  Двойные:   " << dropRes.doubleSuccessfulPercent << "%\n";
+
+    for (const auto& d : dropRes.singleDropOut) {
+        if (d.succeedDropOut) {
+            std::cout << "✓ Пушка " << d.firstGunDrop->name
+                      << ": p-p ↓ " << d.peakToPeakPercentDrop << "%\n";
+        }
+    }
+}
+```
+
+#### Что проверяется для каждого сценария:
+| Критерий | Условие успеха |
+|---------|----------------|
+| `peakToPeakSucceed` | `peakToPeakPercentDrop ≤ maxPeakToPeakDrop` |
+| `primaryToBubbleSucceed` | `primaryToBubble ≥ minPrimaryToBubble` **и** `primaryToBubbleDrop ≤ maxPrimaryToBubbleDrop` |
+| `normXCorrSucceed` | `normXCorrDrop ≥ minNormXCorr` |
+| `averageAmpSucceed` | `averageAmpDrop ≤ maxAverageAmpDrop` |
+| `maxAmpSucceed` | `maxAmpDrop ≤ maxAmpDifference` |
+
+> Все результаты доступны в `DropOutResult` → можно экспортировать в JSON/CSV.
+
+---
+
+## Комбинированный пример (`SpectrumSolverOptions`)
+
+```cpp
+SpectrumSolverOptions options;
+
+// 1. Q-затухание
+options.q_filter.emplace();
+options.q_filter->setQValue(60);
+options.q_filter->setTWTravelTime(1.8);
+
+// 2. Фильтр Винера (spike-decon)
+options.wiener_filter.emplace();
+options.wiener_filter->setLen(32);
+options.wiener_filter->setGap(1);
+options.wiener_filter->spike_mode = true;
+options.wiener_filter->setWhiteLightPercentage(1.5);
+
+// 3. Антиалиасинг (на выходе dt = 1 мс)
+options.antialias_filter.emplace();
+options.antialias_filter->setOutTSamp(0.001);
+options.antialias_filter->setHighNyqPrcntFreqCut(95);
+options.antialias_filter->setHighSlope(72.0);
+
+options.output_sigParams.sampleInterval = 0.001; // ← обязательно!
+
+// 4. Отсев
+options.dropParams.mode = gund_structs::DropOutParameters::SINGLE;
+options.dropParams.maxPeakToPeakDrop = 10.0;
+options.dropParams.minNormXCorr = 0.93;
+
+// Запуск
+auto result = solver.dropOut();  // возвращает DropOutAndSpectrumResults
+```
+
+>  Порядок обработки:
+> `модель → Q → Wiener → bandpass → anti-alias → drop-out анализ`
 
 ## Моделирование сигналов
 
